@@ -14,14 +14,14 @@ class EngagementModel(nn.Module):
     """Same model architecture as in Resnet18.py"""
     def __init__(self, num_classes=4):
         super().__init__()
-        self.backbone = models.resnet18(
+        backbone = models.resnet18(
             weights=models.ResNet18_Weights.IMAGENET1K_V1
         )
-        num_features = self.backbone.fc.in_features
-        self.backbone.fc = nn.Linear(num_features, num_classes)
+        backbone.fc = nn.Linear(backbone.fc.in_features, num_classes)
+        self.model = backbone  # Changed from self.backbone to self.model
 
     def forward(self, x):
-        return self.backbone(x)
+        return self.model(x)  # Changed from self.backbone to self.model
 
 
 def main():

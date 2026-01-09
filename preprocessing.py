@@ -10,6 +10,7 @@ from collections import defaultdict
 from mp_utils import create_face_detector, crop_and_resize_face
 
 # initializing params
+RANDOM_SEED = 42             # Set seed for reproducibility
 FRAME_INTERVAL = 30          # sample 1 frame every 30
 TARGET_SIZE = (224, 224)
 OUT_DIR = "processed_daisee"
@@ -19,6 +20,9 @@ VAL_RATIO = 0.1
 splits = ["Train", "Validation", "Test"]
 balanced = {}
 rows = []
+
+# Set random seeds
+np.random.seed(RANDOM_SEED)
 
 
 def get_daisee_path():
@@ -41,6 +45,9 @@ def preprocess():
     labels_dir = os.path.join(root, "Labels")
     labels_df = load_labels(labels_dir)
     detector = create_face_detector()
+
+    # Set seed again for this function
+    np.random.seed(RANDOM_SEED)
 
     # -------------------------------
     # GLOBAL buffers (KEY CHANGE)
@@ -102,9 +109,8 @@ def preprocess():
     # -------------------------------
     print("\nBalancing classes:")
 
-
     for label, faces in buffers.items():
-        np.random.shuffle(faces)
+        np.random.shuffle(faces)  # Will use the seed set above
         keep = min(len(faces), MAX_PER_CLASS)
         balanced[label] = faces[:keep]
         print(f"  class {label}: using {keep}")

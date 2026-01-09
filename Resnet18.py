@@ -20,11 +20,12 @@ CSV_PATH = f"{DATASET_DIR}/dataset.csv"
 
 NUM_CLASSES = 4
 IMAGE_SIZE = 224
-BATCH_SIZE = 32
-NUM_EPOCHS = 10
-LEARNING_RATE = 1e-3
-LR_STEP_SIZE = 5
-LR_GAMMA = 0.1
+BATCH_SIZE = 16              # Reduced for better generalization
+NUM_EPOCHS = 25              # Increased for better convergence
+LEARNING_RATE = 5e-4         # Lower learning rate for stability
+WEIGHT_DECAY = 1e-4          # Added regularization
+LR_STEP_SIZE = 8             # Adjust LR less frequently
+LR_GAMMA = 0.5               # More gradual LR decay
 NUM_WORKERS = 4
 PIN_MEMORY = True
 
@@ -64,7 +65,11 @@ class EngagementModel(nn.Module):
         backbone = models.resnet18(
             weights=models.ResNet18_Weights.IMAGENET1K_V1
         )
-        backbone.fc = nn.Linear(backbone.fc.in_features, num_classes)
+        # Add dropout for regularization
+        backbone.fc = nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(backbone.fc.in_features, num_classes)
+        )
         self.model = backbone
 
     def forward(self, x):
@@ -106,6 +111,7 @@ def run_epoch(model, loader, criterion, optimizer=None, device="cpu"):
 # ============================================================
 
 if __name__ == "__main__":
+    torch.manual_seed(42)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -125,13 +131,16 @@ if __name__ == "__main__":
     # -------------------------------
     train_transform = transforms.Compose([
         transforms.ToPILImage(),
-        transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(10),
+        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
         transforms.ToTensor(),
         transforms.Normalize(
             mean=[0.485, 0.456, 0.406],
             std=[0.229, 0.224, 0.225]
-        )
+        ),
+        transforms.RandomErasing(p=0.2)
     ])
 
     eval_transform = transforms.Compose([
@@ -166,12 +175,14 @@ if __name__ == "__main__":
         shuffle=False
     )
 
+    class_weights = torch.tensor([1500/600, 1.0, 1.0, 1.0])
+
     # -------------------------------
     # Model / Optimizer
     # -------------------------------
     model = EngagementModel().to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
+    optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     scheduler = optim.lr_scheduler.StepLR(
         optimizer,
         step_size=LR_STEP_SIZE,
@@ -182,6 +193,8 @@ if __name__ == "__main__":
     # Training
     # -------------------------------
     best_val_acc = 0.0
+    patience = 8
+    patience_counter = 0
 
     for epoch in range(NUM_EPOCHS):
         train_loss, train_acc = run_epoch(
@@ -193,15 +206,17 @@ if __name__ == "__main__":
 
         scheduler.step()
 
-        print(
-            f"Epoch {epoch+1}/{NUM_EPOCHS} | "
-            f"Train Acc: {train_acc:.2f}% | "
-            f"Val Acc: {val_acc:.2f}%"
-        )
+        print(f"Epoch {epoch+1}/{NUM_EPOCHS} | Train: {train_acc:.2f}% | Val: {val_acc:.2f}%")
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             torch.save(model.state_dict(), "best_engagement_model.pth")
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"Early stopping at epoch {epoch+1}")
+                break
 
     # -------------------------------
     # Test
