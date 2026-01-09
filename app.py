@@ -11,7 +11,7 @@ from mp_utils import create_face_detector, detect_and_crop_face
 
 
 class EngagementModel(nn.Module):
-    """Same model architecture as in model1.py"""
+    """Same model architecture as in Resnet18.py"""
     def __init__(self, num_classes=4):
         super().__init__()
         self.backbone = models.resnet18(
@@ -39,7 +39,7 @@ def main():
 
     if not os.path.exists("best_engagement_model.pth"):
         print("\nERROR: Trained model not found!")
-        print("Please run: python model1.py")
+        print("Please run: python Resnet18.py")
         return
 
     model.load_state_dict(

@@ -128,12 +128,12 @@ if 'split' in df.columns:
             percentage = (count / len(split_df)) * 100 if len(split_df) > 0 else 0
             print(f"  {label:<15}: {count:>5} ({percentage:>5.1f}%)")
 
-# NEW: 80/10/10 Split distribution (as used in model1.py)
+# NEW: 80/10/10 Split distribution (as used in Resnet18.py)
 print("\n" + "="*60)
-print("80/10/10 TRAINING Split Distribution (as used in model1.py)")
+print("80/10/10 TRAINING Split Distribution (as used in Resnet18.py)")
 print("="*60)
 
-# Replicate the exact split from model1.py
+# Replicate the exact split from Resnet18.py
 df_shuffled = df.sample(frac=1, random_state=42).reset_index(drop=True)
 train_df, temp_df = train_test_split(df_shuffled, test_size=0.2, random_state=42)
 val_df, test_df = train_test_split(temp_df, test_size=0.5, random_state=42)
