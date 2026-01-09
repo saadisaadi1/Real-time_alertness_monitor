@@ -6,6 +6,8 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import requests
 
+SIZE = 224
+
 MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/face_detector/"
     "blaze_face_short_range/float16/latest/blaze_face_short_range.tflite"
@@ -36,7 +38,7 @@ def create_face_detector():
     return vision.FaceDetector.create_from_options(options)
 
 
-def crop_and_resize_face(frame_bgr, x1, y1, x2, y2, target_size=(224, 224)):
+def crop_and_resize_face(frame_bgr, x1, y1, x2, y2, target_size=(SIZE, SIZE)):
     """
     Crop a face region from frame and resize to target size for training.
 
@@ -61,7 +63,7 @@ def crop_and_resize_face(frame_bgr, x1, y1, x2, y2, target_size=(224, 224)):
     return resized_face
 
 
-def detect_and_crop_face(detector, frame_bgr, target_size=(224, 224)):
+def detect_and_crop_face(detector, frame_bgr, target_size=(SIZE, SIZE)):
     """
     Detect face in frame, crop and resize it.
 
